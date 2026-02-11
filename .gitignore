@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+build/*
+!build/windows/
+!build/windows/*.bat
+!build/windows/*.spec
+dist/
+*.spec.bak
+.pytest_cache/
