@@ -58,7 +58,11 @@ from app.export.geojson_export import export_geojson
 from app.export.pdf_report import export_pdf_report
 from app.modules.segmentation.cellpose_runner import CELLPPOSE_AVAILABLE, run_cellpose
 from app.modules.segmentation.onnx_runner import ONNX_AVAILABLE, run_onnx_segmentation
+from app.core.acceleration import detect_acceleration
+from app.models.model_manager import ensure_default_models
 from app.ui.i18n_ru import APP_TITLE, DISCLAIMER, STEP_DESCRIPTIONS, STEP_NAMES
+from app.ui.model_manager_dialog import ModelManagerDialog
+from app.ui.settings_dialog import SettingsDialog
 from app.ui.style import APP_QSS
 from app.utils.workers import CancellableWorker
 from app.viewer.image_view import ImageView
@@ -76,6 +80,7 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)
 
         self.settings = QSettings("HistoAnalyzer", "HistoAnalyzer")
+        self.model_bootstrap_messages = []
         self.ai_engine = AIEngine()
         self.thread_pool = QThreadPool.globalInstance()
         self.active_worker: CancellableWorker | None = None
@@ -111,8 +116,15 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._build_menu()
         self._build_toolbar()
+
+        if self.settings.value("auto_fetch_models", True, type=bool):
+            try:
+                self.model_bootstrap_messages = ensure_default_models()
+            except Exception:
+                self.model_bootstrap_messages = ["Автозагрузка моделей недоступна"]
         self._build_status_bar()
         self._update_scale_status()
+        self._update_accel_status()
 
     def _build_ui(self) -> None:
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -178,6 +190,10 @@ class MainWindow(QMainWindow):
         self.compare_mode_action.setCheckable(True)
         self.compare_mode_action.toggled.connect(self.toggle_compare_mode)
         view_menu.addAction("Сброс вида", self.view.fit_image)
+
+        tools_menu = menu.addMenu("Инструменты")
+        tools_menu.addAction("Настройки…", self.open_settings)
+        tools_menu.addAction("Модели ИИ…", self.open_model_manager)
 
         help_menu = menu.addMenu("Справка")
         help_menu.addAction("О программе", self.show_about)
@@ -252,6 +268,7 @@ class MainWindow(QMainWindow):
         self.step_label = QLabel("Шаг мастера: 0")
         self.scale_label = QLabel("Калибровка: не задана")
         self.compare_label = QLabel("Сравнение: OFF")
+        self.accel_label = QLabel("Устройство: CPU")
         for w in [
             self.zoom_label,
             self.coords_label,
@@ -260,6 +277,7 @@ class MainWindow(QMainWindow):
             self.step_label,
             self.scale_label,
             self.compare_label,
+            self.accel_label,
         ]:
             status.addPermanentWidget(w)
 
@@ -570,6 +588,20 @@ class MainWindow(QMainWindow):
         else:
             self.compare_label.setText("Сравнение: OFF")
 
+    def _update_accel_status(self) -> None:
+        pref = self.settings.value("accel_vendor", "Auto", type=str)
+        info = detect_acceleration(pref)
+        self.accel_label.setText(f"Устройство: {info.vendor} {info.backend}")
+
+    def open_settings(self) -> None:
+        dlg = SettingsDialog(self)
+        if dlg.exec():
+            self._update_accel_status()
+
+    def open_model_manager(self) -> None:
+        dlg = ModelManagerDialog(self)
+        dlg.exec()
+
     def on_dark_mode_toggled(self, checked: bool) -> None:
         from PySide6.QtWidgets import QApplication
 
@@ -585,7 +617,13 @@ class MainWindow(QMainWindow):
         app.setStyleSheet(APP_QSS)
 
     def show_about(self) -> None:
-        QMessageBox.information(self, "О программе", f"{APP_TITLE}\n{DISCLAIMER}")
+        pref = self.settings.value("accel_vendor", "Auto", type=str)
+        info = detect_acceleration(pref)
+        QMessageBox.information(
+            self,
+            "О программе",
+            f"{APP_TITLE}\n{DISCLAIMER}\nУстройство: {info.vendor} / {info.backend}",
+        )
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         urls = event.mimeData().urls() if event.mimeData().hasUrls() else []

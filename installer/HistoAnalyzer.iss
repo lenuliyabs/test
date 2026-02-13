@@ -23,6 +23,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"; Flags: unchecked
+Name: "downloadmodels"; Description: "Скачать модели ИИ при установке"; GroupDescription: "Дополнительно:"; Flags: unchecked
 
 [Files]
 Source: "dist\HistoAnalyzer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -38,4 +39,5 @@ Root: HKCR; Subkey: "HistoAnalyzer.Project\DefaultIcon"; ValueType: string; Valu
 Root: HKCR; Subkey: "HistoAnalyzer.Project\shell\open\command"; ValueType: string; ValueData: """{app}\{#MyAppExeName}"" ""%1"""; Flags: uninsdeletekey
 
 [Run]
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--download-models"; Flags: postinstall skipifsilent nowait; Tasks: downloadmodels
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
