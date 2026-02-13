@@ -59,7 +59,7 @@ from app.export.pdf_report import export_pdf_report
 from app.modules.segmentation.cellpose_runner import CELLPPOSE_AVAILABLE, run_cellpose
 from app.modules.segmentation.onnx_runner import ONNX_AVAILABLE, run_onnx_segmentation
 from app.core.acceleration import detect_acceleration
-from app.models.model_manager import ensure_default_models
+from app.ai.models.registry import check_installed, model_main_path
 from app.ui.i18n_ru import APP_TITLE, DISCLAIMER, STEP_DESCRIPTIONS, STEP_NAMES
 from app.ui.model_manager_dialog import ModelManagerDialog
 from app.ui.settings_dialog import SettingsDialog
@@ -80,7 +80,6 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)
 
         self.settings = QSettings("HistoAnalyzer", "HistoAnalyzer")
-        self.model_bootstrap_messages = []
         self.ai_engine = AIEngine()
         self.thread_pool = QThreadPool.globalInstance()
         self.active_worker: CancellableWorker | None = None
@@ -117,11 +116,6 @@ class MainWindow(QMainWindow):
         self._build_menu()
         self._build_toolbar()
 
-        if self.settings.value("auto_fetch_models", True, type=bool):
-            try:
-                self.model_bootstrap_messages = ensure_default_models()
-            except Exception:
-                self.model_bootstrap_messages = ["Автозагрузка моделей недоступна"]
         self._build_status_bar()
         self._update_scale_status()
         self._update_accel_status()
@@ -193,7 +187,10 @@ class MainWindow(QMainWindow):
 
         tools_menu = menu.addMenu("Инструменты")
         tools_menu.addAction("Настройки…", self.open_settings)
-        tools_menu.addAction("Модели ИИ…", self.open_model_manager)
+
+        ai_menu = menu.addMenu("ИИ")
+        ai_menu.addAction("Модели…", self.open_model_manager)
+        ai_menu.addAction("Проверить SAM", self.check_sam_model)
 
         help_menu = menu.addMenu("Справка")
         help_menu.addAction("О программе", self.show_about)
@@ -598,6 +595,27 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             self._update_accel_status()
 
+
+    def _prompt_missing_model(self, model_key: str, module_name: str) -> bool:
+        ok, _ = check_installed(model_key)
+        if ok:
+            return True
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle("Модель не установлена")
+        box.setText(f"Для модуля '{module_name}' не установлена модель.")
+        box.setInformativeText("Откройте ИИ → Модели и нажмите 'Скачать'.")
+        open_btn = box.addButton("Скачать", QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("Отмена", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() == open_btn:
+            self.open_model_manager()
+        return False
+
+    def check_sam_model(self) -> None:
+        if self._prompt_missing_model("sam_checkpoint", "SAM"):
+            QMessageBox.information(self, "SAM", "Модель SAM установлена и доступна локально.")
+
     def open_model_manager(self) -> None:
         dlg = ModelManagerDialog(self)
         dlg.exec()
@@ -874,14 +892,21 @@ class MainWindow(QMainWindow):
             7: "segmentation",
         }
         stage = stage_map.get(step_idx, "quality_check")
+        backend = self.seg_backend_combo.currentText() if step_idx == 7 else ""
+        onnx_model = self.onnx_model_path.text().strip() if step_idx == 7 else ""
+        if step_idx == 7 and backend == "ONNX" and not onnx_model:
+            if not self._prompt_missing_model("hovernet_onnx", "Зоны/HoVer-Net"):
+                return
+            onnx_model = str(model_main_path("hovernet_onnx"))
+        if step_idx == 7 and backend == "Cellpose":
+            if not self._prompt_missing_model("cellpose_weights", "Ядра/Cellpose"):
+                return
 
         def _work():
             if step_idx == 7:
-                backend = self.seg_backend_combo.currentText()
                 if backend == "ONNX":
-                    model = self.onnx_model_path.text().strip()
-                    if model and ONNX_AVAILABLE:
-                        mask, conf = run_onnx_segmentation(self.original, model)
+                    if onnx_model and ONNX_AVAILABLE:
+                        mask, conf = run_onnx_segmentation(self.original, onnx_model)
                         over = self.original.copy()
                         over[mask > 0] = (
                             over[mask > 0] * 0.6 + np.array([255, 0, 0]) * 0.4
@@ -1209,6 +1234,8 @@ class MainWindow(QMainWindow):
         dia_txt = self.cellpose_diameter.text().strip().lower()
         diameter = None if dia_txt in {"", "auto"} else float(dia_txt)
         try:
+            if not self._prompt_missing_model("cellpose_weights", "Ядра/Cellpose"):
+                return
             self.push_undo()
             self.mask = run_cellpose(
                 self.enhanced,

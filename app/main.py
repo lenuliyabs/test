@@ -3,15 +3,20 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from app.models.model_manager import ensure_default_models
+from app.ai.models.downloader import download_model_pack
 
 
 def main() -> int:
     if "--download-models" in sys.argv:
-        msgs = ensure_default_models()
-        for m in msgs:
+        def _progress(v: int) -> None:
+            print(f"download: {v}%")
+
+        def _log(m: str) -> None:
             print(m)
-        return 0
+
+        ok, msg = download_model_pack(progress_cb=_progress, log_cb=_log)
+        print(msg)
+        return 0 if ok else 1
 
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QApplication

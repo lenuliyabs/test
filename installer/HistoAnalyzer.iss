@@ -23,7 +23,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"; Flags: unchecked
-Name: "downloadmodels"; Description: "Скачать модели ИИ при установке"; GroupDescription: "Дополнительно:"; Flags: unchecked
+Name: "downloadmodels"; Description: "Скачать модели ИИ (один раз, затем оффлайн)"; GroupDescription: "Дополнительно:"; Flags: unchecked
 
 [Files]
 Source: "dist\HistoAnalyzer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
