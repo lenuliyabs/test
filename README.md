@@ -55,6 +55,10 @@ python -m app.main
 python -m app.main "C:\path\to\sample.histo"
 ```
 
+## FULL_AI (Windows)
+- **FULL_AI поддерживается только на Python 3.11 (Windows).**
+- Запуск: двойной клик `RUN_WINDOWS_FULL_AI.bat` из корня проекта. Скрипт принудительно использует `py -3.11`, пересоздаёт `.venv` при другой версии Python и сохраняет лог в `run_full_ai_install_log.txt`.
+
 ## Установка (dev)
 ```bash
 python -m venv .venv
