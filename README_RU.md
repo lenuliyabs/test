@@ -13,7 +13,7 @@
 
 Также можно в CLI:
 ```bash
-python -m app.main --download-models
+python -m app --download-models
 ```
 
 ## Как проверить установку
@@ -28,3 +28,11 @@ python -m app.main --download-models
 1. Скопируйте всю папку `%LOCALAPPDATA%\HistoAnalyzer\models` на новый ПК в тот же путь.
 2. Запустите HistoAnalyzer и нажмите **ИИ → Модели → Проверить**.
 3. Интернет для работы модулей после этого не нужен.
+
+## Запуск на Windows
+- Требуется **Python 3.11 x64**.
+- LITE: двойной клик `RUN_WINDOWS_LITE.bat` (ставит только `requirements.txt`).
+- FULL_AI: двойной клик `RUN_WINDOWS_FULL_AI.bat` (ставит `requirements.txt` + `requirements_full_windows.txt`).
+- Логи установки: `run_lite_install_log.txt` и `run_full_ai_install_log.txt` в корне проекта.
+- Если установка оборвалась: откройте лог и пришлите его целиком.
+

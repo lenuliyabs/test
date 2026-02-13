@@ -3,11 +3,11 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 cd /d "%~dp0"
 
-set "LOG_FILE=run_full_ai_install_log.txt"
+set "LOG_FILE=run_lite_install_log.txt"
 set "TARGET_PY=3.11"
-> "%LOG_FILE%" echo [%DATE% %TIME%] RUN_WINDOWS_FULL_AI start
+> "%LOG_FILE%" echo [%DATE% %TIME%] RUN_WINDOWS_LITE start
 
-echo [1/8] Проверка Python %TARGET_PY%...
+echo [1/7] Проверка Python %TARGET_PY%...
 py -%TARGET_PY% -c "import sys; print(sys.version)" >> "%LOG_FILE%" 2>&1
 if errorlevel 1 (
     echo [ERROR] Python %TARGET_PY% (x64) не найден.
@@ -15,7 +15,7 @@ if errorlevel 1 (
     goto :error
 )
 
-echo [2/8] Проверка существующей .venv...
+echo [2/7] Проверка существующей .venv...
 if exist ".venv" (
     if not exist ".venv\.pyver" (
         echo .venv найдена без маркера версии, пересоздание...>> "%LOG_FILE%"
@@ -33,29 +33,25 @@ if exist ".venv" (
 )
 
 if not exist ".venv\Scripts\python.exe" (
-    echo [3/8] Создание .venv на Python %TARGET_PY%...
+    echo [3/7] Создание .venv на Python %TARGET_PY%...
     py -%TARGET_PY% -m venv .venv >> "%LOG_FILE%" 2>&1
     if errorlevel 1 goto :error
     > ".venv\.pyver" echo %TARGET_PY%
 )
 
-echo [4/8] Активация окружения...
+echo [4/7] Активация окружения...
 call ".venv\Scripts\activate.bat" >> "%LOG_FILE%" 2>&1
 if errorlevel 1 goto :error
 
-echo [5/8] Обновление pip/setuptools/wheel...
+echo [5/7] Обновление pip/setuptools/wheel...
 python -m pip install --upgrade pip setuptools wheel >> "%LOG_FILE%" 2>&1
 if errorlevel 1 goto :error
 
-echo [6/8] Установка requirements.txt...
+echo [6/7] Установка requirements.txt...
 python -m pip install -r requirements.txt >> "%LOG_FILE%" 2>&1
 if errorlevel 1 goto :error
 
-echo [7/8] Установка requirements_full_windows.txt...
-python -m pip install -r requirements_full_windows.txt >> "%LOG_FILE%" 2>&1
-if errorlevel 1 goto :error
-
-echo [8/8] Запуск приложения...
+echo [7/7] Запуск приложения...
 python -m app >> "%LOG_FILE%" 2>&1
 if errorlevel 1 goto :error
 
